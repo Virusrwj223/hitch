@@ -5,11 +5,12 @@ import {
   TouchableOpacity,
   StyleSheet,
 } from "react-native";
-import { useState } from "react";
+import { useContext, useState } from "react";
 import { COLORS, SIZES } from "./mis/theme";
 import { FontAwesome, Entypo } from "@expo/vector-icons";
 import { ref, set, onValue, remove } from "firebase/database";
-import { db } from "C:/CodingProjects/CodingProjects/hitch/components/config.jsx";
+import { db } from "../components/config.jsx";
+import { AuthContext } from "./mis/AuthContext";
 
 export default function Home() {
   const [lat, setlat] = useState("");
@@ -18,22 +19,24 @@ export default function Home() {
   const [dest, setDest] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [output, setOutput] = useState();
+  const { userData, setUserData } = useContext(AuthContext);
+
   function create() {
-    set(ref(db, "activities/" + 1), {
-      username: "Hrishi",
+    set(ref(db, "activities/" + userData), {
+      username: userData,
       lat: lat,
       lng: lng,
     });
   }
-  function get(num) {
-    const starCountRef = ref(db, "activities/" + num);
+  function get() {
+    const starCountRef = ref(db, "activities/" + userData);
     onValue(starCountRef, (snapshot) => {
       const data = snapshot.val();
       setMatch(data);
     });
   }
   function stopSearch() {
-    remove(ref(db, "activities/" + 1));
+    remove(ref(db, "activities/" + userData));
     return "";
   }
   function buttonClickListener(text) {
@@ -52,7 +55,7 @@ export default function Home() {
     const result = [];
 
     for (let i = 1; i < 2; i = i + 1) {
-      get(i);
+      get();
       if (match === undefined || match === null) {
         break;
       } else {
@@ -83,7 +86,7 @@ export default function Home() {
       }
     }
     if (lat_lst.length === 0) {
-      return <Text>Please wait</Text>;
+      return <Text>click again</Text>;
     } else {
       const lat_final = lat_counter / lat_lst.length;
       const lng_final = lng_counter / lng_lst.length;
@@ -97,18 +100,16 @@ export default function Home() {
         });
       return (
         <View>
-          <Text style={styles.userName}>{dest}</Text>
-          <Text style={styles.userName}>
-            {ppl}
-            <TouchableOpacity
-              style={styles.searchBtn}
-              onPress={() => {
-                setOutput(stopSearch());
-              }}
-            >
-              <Entypo name="cross" size={24} color="black" />
-            </TouchableOpacity>
-          </Text>
+          <Text style={styles.results}>{dest}</Text>
+          <Text style={styles.results}>{ppl}</Text>
+          <TouchableOpacity
+            style={styles.stopBtn}
+            onPress={() => {
+              setOutput(stopSearch());
+            }}
+          >
+            <Entypo name="cross" size={24} color="black" />
+          </TouchableOpacity>
         </View>
       );
     }
@@ -117,7 +118,7 @@ export default function Home() {
   return (
     <View>
       <View style={styles.container}>
-        <Text style={styles.userName}>Hello Raj</Text>
+        <Text style={styles.userName}>Hello {userData}</Text>
         <Text style={styles.welcomeMessage}>Where do you want to go today</Text>
       </View>
 
@@ -139,12 +140,21 @@ export default function Home() {
           <FontAwesome name="search" size={24} color="black" />
         </TouchableOpacity>
       </View>
-      <View style={styles.container}>{output}</View>
+      <View style={styles.containerNested}>{output}</View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  containerNested: {
+    backgroundColor: "#E8E9EB",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 30,
+    //paddingTop: 10,
+    borderRadius: 20,
+    height: 150,
+  },
   container: {
     width: "100%",
   },
@@ -152,6 +162,13 @@ const styles = StyleSheet.create({
     //fontFamily: FONT.regular,
     fontSize: SIZES.large,
     color: COLORS.secondary,
+    fontWeight: "bold",
+  },
+  results: {
+    //fontFamily: FONT.regular,
+    fontSize: SIZES.large,
+    color: COLORS.secondary,
+    //margin: 10,
   },
   welcomeMessage: {
     //fontFamily: FONT.bold,
@@ -188,6 +205,15 @@ const styles = StyleSheet.create({
     borderRadius: SIZES.medium,
     justifyContent: "center",
     alignItems: "center",
+  },
+  stopBtn: {
+    width: "100%",
+    height: "40%",
+    backgroundColor: COLORS.tertiary,
+    borderRadius: SIZES.medium,
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 10,
   },
   searchBtnImage: {
     width: "50%",
