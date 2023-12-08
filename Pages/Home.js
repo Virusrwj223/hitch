@@ -12,139 +12,6 @@ import { ref, set, onValue, remove } from "firebase/database";
 import { db } from "../components/config.jsx";
 import { AuthContext } from "./mis/AuthContext";
 
-export default function Home() {
-  const [lat, setlat] = useState("");
-  const [lng, setlng] = useState("");
-  const [match, setMatch] = useState();
-  const [dest, setDest] = useState("");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [output, setOutput] = useState();
-  const { userData, setUserData } = useContext(AuthContext);
-
-  function create() {
-    set(ref(db, "activities/" + userData), {
-      username: userData,
-      lat: lat,
-      lng: lng,
-    });
-  }
-  function get() {
-    const starCountRef = ref(db, "activities/" + userData);
-    onValue(starCountRef, (snapshot) => {
-      const data = snapshot.val();
-      setMatch(data);
-    });
-  }
-  function stopSearch() {
-    remove(ref(db, "activities/" + userData));
-    return "";
-  }
-  function buttonClickListener(text) {
-    const api_loc = "10%Pari%Dedap%Walk"; //text.replace(/ /g, "%");
-    fetch(
-      `https://www.mapquestapi.com/geocoding/v1/address?key=55EXm4OFNP9Woczhu8MSk1jSfDSDG5mR&location=${api_loc}`
-    )
-      .then((res) => res.json())
-      .then((j) => {
-        setlat(j["results"][0]["locations"][0]["latLng"]["lat"]);
-        setlng(j["results"][0]["locations"][0]["latLng"]["lng"]);
-      });
-
-    create();
-
-    const result = [];
-
-    for (let i = 1; i < 2; i = i + 1) {
-      get();
-      if (match === undefined || match === null) {
-        break;
-      } else {
-        result[i - 1] = match;
-      }
-    }
-    const lat_lst = [];
-    const lng_lst = [];
-    const ppl = [];
-    for (let i = 0; i < result.length; i = i + 1) {
-      if (result[i] !== undefined) {
-        lat_lst[i] = result[i]["lat"];
-        lng_lst[i] = result[i]["lng"];
-        ppl[i] = result[i]["username"];
-      }
-    }
-
-    let lat_counter = 0;
-    let lng_counter = 0;
-    for (let i = 0; i < lat_lst.length; i = i + 1) {
-      if (result[i] !== undefined) {
-        if (lat_lst[i] >= lat - 0.0003 && lat_lst[i] <= lat + 0.0003) {
-          lat_counter += lat_lst[i];
-        }
-        if (lng_lst[i] >= lng - 0.0003 && lng_lst[i] <= lng + 0.0003) {
-          lng_counter += lng_lst[i];
-        }
-      }
-    }
-    if (lat_lst.length === 0) {
-      return <Text>click again</Text>;
-    } else {
-      const lat_final = lat_counter / lat_lst.length;
-      const lng_final = lng_counter / lng_lst.length;
-
-      fetch(
-        `https://www.mapquestapi.com/geocoding/v1/reverse?key=55EXm4OFNP9Woczhu8MSk1jSfDSDG5mR&location=${lat_final},${lng_final}8&includeRoadMetadata=true&includeNearestIntersection=true`
-      )
-        .then((res) => res.json())
-        .then((j) => {
-          setDest(j["results"][0]["locations"][0]["street"]);
-        });
-      return (
-        <View>
-          <Text style={styles.results}>{dest}</Text>
-          <Text style={styles.results}>{ppl}</Text>
-          <TouchableOpacity
-            style={styles.stopBtn}
-            onPress={() => {
-              setOutput(stopSearch());
-            }}
-          >
-            <Entypo name="cross" size={24} color="black" />
-          </TouchableOpacity>
-        </View>
-      );
-    }
-  }
-
-  return (
-    <View>
-      <View style={styles.container}>
-        <Text style={styles.userName}>Hello {userData}</Text>
-        <Text style={styles.welcomeMessage}>Where do you want to go today</Text>
-      </View>
-
-      <View style={styles.searchContainer}>
-        <View style={styles.searchWrapper}>
-          <TextInput
-            style={styles.searchInput}
-            value={searchTerm}
-            onChangeText={(text) => setSearchTerm(text)}
-            placeholder="I am going to..."
-          />
-        </View>
-        <TouchableOpacity
-          style={styles.searchBtn}
-          onPress={() => {
-            setOutput(buttonClickListener(searchTerm));
-          }}
-        >
-          <FontAwesome name="search" size={24} color="black" />
-        </TouchableOpacity>
-      </View>
-      <View style={styles.containerNested}>{output}</View>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   containerNested: {
     backgroundColor: "#E8E9EB",
@@ -221,3 +88,137 @@ const styles = StyleSheet.create({
     tintColor: COLORS.white,
   },
 });
+
+function Home1() {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [output, setOutput] = useState(<Text></Text>);
+  const { userData, setUserData } = useContext(AuthContext);
+  //const userData = "Hrishi";
+  //DB
+  function create(lat, lng) {
+    set(ref(db, "activities/" + userData), {
+      username: userData,
+      lat: lat,
+      lng: lng,
+    });
+  }
+  async function get() {
+    const starCountRef = ref(db, "activities/" + userData);
+    let response = "";
+    await onValue(starCountRef, (snapshot) => {
+      response = snapshot.val();
+    });
+    return response;
+  }
+  function stopSearch() {
+    remove(ref(db, "activities/" + userData));
+    setOutput(<View></View>);
+  }
+  //QUEST api
+  async function getCoords(text) {
+    const api_loc = "10%Pari%Dedap%Walk"; //text.replace(/ /g, "%");
+    const response = await fetch(
+      `https://www.mapquestapi.com/geocoding/v1/address?key=55EXm4OFNP9Woczhu8MSk1jSfDSDG5mR&location=${api_loc}`
+    );
+    const temp = await response.json();
+    const lat = await temp["results"][0]["locations"][0]["latLng"]["lat"];
+    const lng = await temp["results"][0]["locations"][0]["latLng"]["lng"];
+    return [lat, lng];
+  }
+  async function getStreet(lat, lng) {
+    const response = await fetch(
+      `https://www.mapquestapi.com/geocoding/v1/reverse?key=55EXm4OFNP9Woczhu8MSk1jSfDSDG5mR&location=${lat},${lng}8&includeRoadMetadata=true&includeNearestIntersection=true`
+    );
+    const temp = await response.json();
+    const street = await temp["results"][0]["locations"][0]["street"];
+    return street;
+  }
+  //Parser
+  async function buttonClickListener(text) {
+    const raw_coords = await getCoords(text);
+    const raw_lat = raw_coords[0];
+    const raw_lng = raw_coords[1];
+    create(raw_lat, raw_lng);
+
+    const result = [];
+    for (let i = 1; i < 2; i = i + 1) {
+      const match = await get();
+      if (match === undefined || match === null) {
+        break;
+      } else {
+        result[i - 1] = match;
+      }
+    }
+
+    const lat_lst = [];
+    const lng_lst = [];
+    const ppl = [];
+    for (let i = 0; i < result.length; i = i + 1) {
+      if (result[i] !== undefined) {
+        lat_lst[i] = result[i]["lat"];
+        lng_lst[i] = result[i]["lng"];
+        ppl[i] = result[i]["username"];
+      }
+    }
+
+    let lat_counter = 0;
+    let lng_counter = 0;
+    for (let i = 0; i < lat_lst.length; i = i + 1) {
+      if (result[i] !== undefined) {
+        if (lat_lst[i] >= raw_lat - 0.0003 && lat_lst[i] <= raw_lat + 0.0003) {
+          lat_counter += lat_lst[i];
+        }
+        if (lng_lst[i] >= raw_lng - 0.0003 && lng_lst[i] <= raw_lng + 0.0003) {
+          lng_counter += lng_lst[i];
+        }
+      }
+    }
+    const lat_final = lat_counter / lat_lst.length;
+    const lng_final = lng_counter / lng_lst.length;
+    const street = await getStreet(lat_final, lng_final);
+    setOutput(
+      <View>
+        <Text style={styles.results}>{street}</Text>
+        <Text style={styles.results}>{ppl}</Text>
+        <TouchableOpacity
+          style={styles.stopBtn}
+          onPress={() => {
+            stopSearch();
+          }}
+        >
+          <Entypo name="cross" size={24} color="black" />
+        </TouchableOpacity>
+      </View>
+    );
+  }
+  return (
+    <View>
+      <View style={styles.container}>
+        <Text style={styles.userName}>Hello </Text>
+        <Text style={styles.welcomeMessage}>Where do you want to go today</Text>
+      </View>
+
+      <View style={styles.searchContainer}>
+        <View style={styles.searchWrapper}>
+          <TextInput
+            style={styles.searchInput}
+            value={searchTerm}
+            onChangeText={(text) => setSearchTerm(text)}
+            placeholder="I am going to..."
+          />
+        </View>
+        <TouchableOpacity
+          style={styles.searchBtn}
+          onPress={() => {
+            buttonClickListener(searchTerm);
+          }}
+        >
+          <FontAwesome name="search" size={24} color="black" />
+        </TouchableOpacity>
+      </View>
+      <View style={styles.containerNested}>{output}</View>
+    </View>
+  );
+}
+
+export default Home1;
