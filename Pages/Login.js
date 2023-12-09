@@ -9,7 +9,6 @@ import {
 } from "react-native";
 import { COLORS, SIZES } from "./mis/theme";
 import { useState } from "react";
-import { FontAwesome } from "@expo/vector-icons";
 import { db } from "../components/config.jsx";
 import { AuthContext } from "./mis/AuthContext";
 import { ref, set } from "firebase/database";
@@ -62,7 +61,7 @@ const Login = () => {
               buttonClickListener(username);
             }}
           >
-            <FontAwesome name="search" size={24} color="black" />
+            <Text>LOGIN/REGISTER </Text>
           </TouchableOpacity>
         </View>
       </View>

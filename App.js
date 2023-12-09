@@ -17,7 +17,7 @@ export default function App() {
 }
 /*
 <AuthContext.Provider value={{ userData, setUserData }}>
-        {userData ? <Home /> : <Login />}
+        {userData ? <Home1 /> : <Login />}
       </AuthContext.Provider>
 */
 const styles = StyleSheet.create({

@@ -5,12 +5,13 @@ import {
   TouchableOpacity,
   StyleSheet,
 } from "react-native";
-import { useContext, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { COLORS, SIZES } from "./mis/theme";
 import { FontAwesome, Entypo } from "@expo/vector-icons";
-import { ref, set, onValue, remove } from "firebase/database";
+import { ref, set, onValue, remove, push, child } from "firebase/database";
 import { db } from "../components/config.jsx";
 import { AuthContext } from "./mis/AuthContext";
+import * as Location from "expo-location";
 
 const styles = StyleSheet.create({
   containerNested: {
@@ -92,24 +93,62 @@ const styles = StyleSheet.create({
 function Home1() {
   const [searchTerm, setSearchTerm] = useState("");
   const [output, setOutput] = useState(<Text></Text>);
+  const [actNames, setActNames] = useState([]);
+  const [manifest, setManifest] = useState([]);
   const { userData, setUserData } = useContext(AuthContext);
-  //const userData = "Hrishi";
+  //const userData = "ritu";
+  const [location1, setLocation] = useState();
+  useEffect(() => {
+    const getPermissions = async () => {
+      let { status } = await Location.requestBackgroundPermissionsAsync();
+      if (status !== "granted") {
+        setLocation("Bad Request");
+        return;
+      }
+      let currentLocation = await Location.getCurrentPositionAsync({});
+      setLocation(currentLocation);
+    };
+    getPermissions();
+  }, []);
+  useEffect(() => {
+    const tester = ref(db, "activities/");
+    onValue(
+      tester,
+      (snapshot) => {
+        let rezz = [];
+        setManifest(snapshot.val());
+        snapshot.forEach((childSnapshot) => {
+          const childKey = childSnapshot.key;
+          rezz.push(childKey);
+        });
+        setActNames(rezz);
+      },
+      {
+        onlyOnce: true,
+      }
+    );
+  }, []);
   //DB
-  function create(lat, lng) {
-    set(ref(db, "activities/" + userData), {
+  async function create(lat, lng, curr_lat, curr_lng) {
+    await set(ref(db, "activities/" + userData), {
       username: userData,
+      curr_lat: curr_lat,
+      curr_lng: curr_lng,
       lat: lat,
       lng: lng,
     });
   }
-  async function get() {
-    const starCountRef = ref(db, "activities/" + userData);
+  /*
+  function get(username) {
+    const starCountRef = ref(db, "activities/" + username);
     let response = "";
-    await onValue(starCountRef, (snapshot) => {
+    onValue(starCountRef, (snapshot) => {
       response = snapshot.val();
     });
     return response;
   }
+  */
+
   function stopSearch() {
     remove(ref(db, "activities/" + userData));
     setOutput(<View></View>);
@@ -121,6 +160,7 @@ function Home1() {
       `https://www.mapquestapi.com/geocoding/v1/address?key=55EXm4OFNP9Woczhu8MSk1jSfDSDG5mR&location=${api_loc}`
     );
     const temp = await response.json();
+
     const lat = await temp["results"][0]["locations"][0]["latLng"]["lat"];
     const lng = await temp["results"][0]["locations"][0]["latLng"]["lng"];
     return [lat, lng];
@@ -135,32 +175,50 @@ function Home1() {
   }
   //Parser
   async function buttonClickListener(text) {
+    if (location1 == "Bad Request") {
+      setOutput(
+        <View>
+          <Text>Please grant location permissions</Text>
+        </View>
+      );
+      return;
+    }
+    const curr_lat = location1["coords"]["latitude"];
+    const curr_lng = location1["coords"]["longitude"];
     const raw_coords = await getCoords(text);
+
     const raw_lat = raw_coords[0];
     const raw_lng = raw_coords[1];
-    create(raw_lat, raw_lng);
+    await create(raw_lat, raw_lng, curr_lat, curr_lng);
 
     const result = [];
-    for (let i = 1; i < 2; i = i + 1) {
-      const match = await get();
+    for (let i = 0; i < actNames.length; i = i + 1) {
+      const name = actNames[i];
+      const match = manifest[name];
+      console.log(name);
+      console.log(match);
       if (match === undefined || match === null) {
         break;
       } else {
-        result[i - 1] = match;
+        result[i] = match;
       }
     }
-
     const lat_lst = [];
     const lng_lst = [];
     const ppl = [];
     for (let i = 0; i < result.length; i = i + 1) {
-      if (result[i] !== undefined) {
+      if (
+        result[i] !== undefined &&
+        result[i]["curr_lat"] >= curr_lat - 0.5 &&
+        result[i]["curr_lat"] <= curr_lat + 0.5 &&
+        result[i]["curr_lng"] >= curr_lng - 0.5 &&
+        result[i]["curr_lng"] <= curr_lng + 0.5
+      ) {
         lat_lst[i] = result[i]["lat"];
         lng_lst[i] = result[i]["lng"];
         ppl[i] = result[i]["username"];
       }
     }
-
     let lat_counter = 0;
     let lng_counter = 0;
     for (let i = 0; i < lat_lst.length; i = i + 1) {
@@ -175,26 +233,35 @@ function Home1() {
     }
     const lat_final = lat_counter / lat_lst.length;
     const lng_final = lng_counter / lng_lst.length;
-    const street = await getStreet(lat_final, lng_final);
-    setOutput(
-      <View>
-        <Text style={styles.results}>{street}</Text>
-        <Text style={styles.results}>{ppl}</Text>
-        <TouchableOpacity
-          style={styles.stopBtn}
-          onPress={() => {
-            stopSearch();
-          }}
-        >
-          <Entypo name="cross" size={24} color="black" />
-        </TouchableOpacity>
-      </View>
-    );
+    if (ppl.length === 0) {
+      setOutput(
+        <View>
+          <Text>No one here yet</Text>
+        </View>
+      );
+    } else {
+      const street = await getStreet(lat_final, lng_final);
+      const namesString = ppl.join(" ");
+      setOutput(
+        <View>
+          <Text style={styles.results}>{street}</Text>
+          <Text style={styles.results}>{namesString}</Text>
+          <TouchableOpacity
+            style={styles.stopBtn}
+            onPress={() => {
+              stopSearch();
+            }}
+          >
+            <Entypo name="cross" size={24} color="black" />
+          </TouchableOpacity>
+        </View>
+      );
+    }
   }
   return (
     <View>
       <View style={styles.container}>
-        <Text style={styles.userName}>Hello </Text>
+        <Text style={styles.userName}>Hello {userData}</Text>
         <Text style={styles.welcomeMessage}>Where do you want to go today</Text>
       </View>
 
