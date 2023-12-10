@@ -75,7 +75,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   stopBtn: {
-    width: "100%",
+    width: 250,
     height: "40%",
     backgroundColor: COLORS.tertiary,
     borderRadius: SIZES.medium,
@@ -96,11 +96,11 @@ function Home1() {
   const [actNames, setActNames] = useState([]);
   const [manifest, setManifest] = useState([]);
   const { userData, setUserData } = useContext(AuthContext);
-  //const userData = "ritu";
+  //const userData = "tommy";
   const [location1, setLocation] = useState();
   useEffect(() => {
     const getPermissions = async () => {
-      let { status } = await Location.requestBackgroundPermissionsAsync();
+      let { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== "granted") {
         setLocation("Bad Request");
         return;
@@ -155,7 +155,10 @@ function Home1() {
   }
   //QUEST api
   async function getCoords(text) {
-    const api_loc = "10%Pari%Dedap%Walk"; //text.replace(/ /g, "%");
+    let api_loc = text.replace(/ /g, "%"); //"10%Pari%Dedap%Walk"; //text.replace(/ /g, "%");
+    if (api_loc === "") {
+      api_loc = "NUS%School%Of%Computing";
+    }
     const response = await fetch(
       `https://www.mapquestapi.com/geocoding/v1/address?key=55EXm4OFNP9Woczhu8MSk1jSfDSDG5mR&location=${api_loc}`
     );
@@ -209,30 +212,33 @@ function Home1() {
     for (let i = 0; i < result.length; i = i + 1) {
       if (
         result[i] !== undefined &&
-        result[i]["curr_lat"] >= curr_lat - 0.5 &&
-        result[i]["curr_lat"] <= curr_lat + 0.5 &&
-        result[i]["curr_lng"] >= curr_lng - 0.5 &&
-        result[i]["curr_lng"] <= curr_lng + 0.5
+        result[i]["curr_lat"] >= curr_lat - 0.01 &&
+        result[i]["curr_lat"] <= curr_lat + 0.01 &&
+        result[i]["curr_lng"] >= curr_lng - 0.01 &&
+        result[i]["curr_lng"] <= curr_lng + 0.01 &&
+        result[i]["lat"] >= raw_lat - 0.01 &&
+        result[i]["lat"] <= raw_lat + 0.01 &&
+        result[i]["lng"] >= raw_lng - 0.01 &&
+        result[i]["lng"] <= raw_lng + 0.01
       ) {
         lat_lst[i] = result[i]["lat"];
         lng_lst[i] = result[i]["lng"];
         ppl[i] = result[i]["username"];
       }
     }
+    console.log(ppl);
     let lat_counter = 0;
     let lng_counter = 0;
     for (let i = 0; i < lat_lst.length; i = i + 1) {
       if (result[i] !== undefined) {
-        if (lat_lst[i] >= raw_lat - 0.0003 && lat_lst[i] <= raw_lat + 0.0003) {
-          lat_counter += lat_lst[i];
-        }
-        if (lng_lst[i] >= raw_lng - 0.0003 && lng_lst[i] <= raw_lng + 0.0003) {
-          lng_counter += lng_lst[i];
-        }
+        lat_counter += lat_lst[i];
+
+        lng_counter += lng_lst[i];
       }
     }
     const lat_final = lat_counter / lat_lst.length;
     const lng_final = lng_counter / lng_lst.length;
+    console.log(lat_final);
     if (ppl.length === 0) {
       setOutput(
         <View>
@@ -252,7 +258,8 @@ function Home1() {
               stopSearch();
             }}
           >
-            <Entypo name="cross" size={24} color="black" />
+            <Text>X</Text>
+            {/*<Entypo name="cross" size={24} color="black" />*/}
           </TouchableOpacity>
         </View>
       );
@@ -280,7 +287,8 @@ function Home1() {
             buttonClickListener(searchTerm);
           }}
         >
-          <FontAwesome name="search" size={24} color="black" />
+          <Text>Go</Text>
+          {/*<FontAwesome name="search" size={24} color="black" />*/}
         </TouchableOpacity>
       </View>
       <View style={styles.containerNested}>{output}</View>

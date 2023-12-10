@@ -1,5 +1,13 @@
 {
   "expo": {
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "isAndroidBackgroundLocationEnabled": true
+        }
+      ]
+    ],
     "name": "hitch",
     "slug": "hitch",
     "version": "1.0.0",
@@ -19,10 +27,16 @@
       "adaptiveIcon": {
         "foregroundImage": "./Pages/pics/hitch_logo.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.hrishiraj.hitch"
     },
     "web": {
       "favicon": "./Pages/pics/hitch_logo.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "564c0bcb-4293-448d-b8f0-ffca03ff2fb3"
+      }
     }
   }
 }
