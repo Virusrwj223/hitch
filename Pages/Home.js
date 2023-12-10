@@ -21,7 +21,7 @@ const styles = StyleSheet.create({
     marginTop: 30,
     //paddingTop: 10,
     borderRadius: 20,
-    height: 150,
+    height: 300,
   },
   container: {
     width: "100%",
@@ -36,6 +36,15 @@ const styles = StyleSheet.create({
     //fontFamily: FONT.regular,
     fontSize: SIZES.large,
     color: COLORS.secondary,
+    alignItems: "center",
+    //margin: 10,
+  },
+  results_head: {
+    //fontFamily: FONT.regular,
+    fontSize: SIZES.large,
+    color: COLORS.secondary,
+    alignItems: "center",
+    fontWeight: "bold",
     //margin: 10,
   },
   welcomeMessage: {
@@ -76,7 +85,7 @@ const styles = StyleSheet.create({
   },
   stopBtn: {
     width: 250,
-    height: "40%",
+    height: 60,
     backgroundColor: COLORS.tertiary,
     borderRadius: SIZES.medium,
     justifyContent: "center",
@@ -208,6 +217,8 @@ function Home1() {
     }
     const lat_lst = [];
     const lng_lst = [];
+    const curr_lat_lst = [];
+    const curr_lng_lst = [];
     const ppl = [];
     for (let i = 0; i < result.length; i = i + 1) {
       if (
@@ -223,22 +234,29 @@ function Home1() {
       ) {
         lat_lst[i] = result[i]["lat"];
         lng_lst[i] = result[i]["lng"];
+        curr_lat_lst[i] = result[i]["curr_lat"];
+        curr_lng_lst[i] = result[i]["curr_lng"];
         ppl[i] = result[i]["username"];
       }
     }
-    console.log(ppl);
+
     let lat_counter = 0;
     let lng_counter = 0;
+    let curr_lat_counter = 0;
+    let curr_lng_counter = 0;
     for (let i = 0; i < lat_lst.length; i = i + 1) {
       if (result[i] !== undefined) {
         lat_counter += lat_lst[i];
-
         lng_counter += lng_lst[i];
+        curr_lat_counter += curr_lat_lst[i];
+        curr_lng_counter += curr_lng_lst[i];
       }
     }
     const lat_final = lat_counter / lat_lst.length;
     const lng_final = lng_counter / lng_lst.length;
-    console.log(lat_final);
+    const curr_lat_final = (lat_counter + curr_lat) / (lat_lst.length + 1);
+    const curr_lng_final = (lng_counter + curr_lng) / (lng_lst.length + 1);
+
     if (ppl.length === 0) {
       setOutput(
         <View>
@@ -247,10 +265,16 @@ function Home1() {
       );
     } else {
       const street = await getStreet(lat_final, lng_final);
+      const curr_street = await getStreet(curr_lat_final, curr_lng_final);
       const namesString = ppl.join(" ");
       setOutput(
         <View>
+          <Text style={styles.results_head}>Please wait at: </Text>
+          <Text style={styles.results}>{curr_street}</Text>
+          <Text></Text>
+          <Text style={styles.results_head}>Destination: </Text>
           <Text style={styles.results}>{street}</Text>
+          <Text></Text>
           <Text style={styles.results}>{namesString}</Text>
           <TouchableOpacity
             style={styles.stopBtn}
